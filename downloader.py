@@ -32,7 +32,7 @@ async def run_job(job: Job):
     stickers = []
     for i, document in enumerate(sticker_set.documents):
         file = BytesIO()
-        task = asyncio.ensure_future(
+        task = asyncio.create_task(
             client.download_media(document, file=file)
         ) 
         pending_tasks.append(task)
