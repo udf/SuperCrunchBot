@@ -48,7 +48,7 @@ async def run_job(job: Job):
             short_name = f'{original_short_name}'[:62 - len(suffix)] + suffix
             logger.info('Trying to create pack %s', short_name)
             await client(CreateStickerSetRequest(
-                user_id=await job.event.get_input_sender(),
+                user_id=job.owner,
                 title=title,
                 short_name=short_name,
                 stickers=stickers
