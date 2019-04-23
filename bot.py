@@ -50,7 +50,7 @@ async def on_message(event):
     logger.info(
         '[%s] User %s requested sticker set %s',
         job.id,
-        (await event.get_input_sender()).user_id,
+        event.from_id,
         sticker_set.set.short_name
     )
 
