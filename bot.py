@@ -17,7 +17,7 @@ proxy.JOB_MODULES = JOB_MODULES = {}
 
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('main')
+logger: logging.Logger = logging.getLogger('main')
 proxy.client = client = TelegramClient("bot", 6, "eb06d4abfb49dc3eeb1aeb98ae0f581e").start()
 proxy.me = me = asyncio.get_event_loop().run_until_complete(client.get_me())
 
@@ -64,11 +64,7 @@ async def job_runner(mod):
         try:
             await mod.run_job(await mod.queue.get())
         except Exception as e:
-            logger.log(
-                'Exception on job runner for %s\n%s',
-                mod.__name__,
-                traceback.format_exc()
-            )
+            logger.exception('Exception on job runner for %s', mod.__name__)
 
 
 def load_handler_module(name):
