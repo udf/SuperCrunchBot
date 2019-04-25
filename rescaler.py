@@ -11,7 +11,6 @@ from util import Job, Sticker
 from proxy import logger, JOB_MODULES
 
 queue = asyncio.Queue(3)
-executor = concurrent.futures.ThreadPoolExecutor()
 
 
 def crunch(sticker: Sticker):
@@ -24,6 +23,7 @@ def crunch(sticker: Sticker):
 
 
 def do_crunch(loop, job: Job):
+    executor = concurrent.futures.ProcessPoolExecutor()
     futures = [executor.submit(crunch, sticker) for sticker in job.stickers]
     for i, future in enumerate(concurrent.futures.as_completed(futures)):
         future.result()
