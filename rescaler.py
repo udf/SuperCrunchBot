@@ -26,6 +26,7 @@ def crunch(sticker: Sticker):
 def do_crunch(loop, job: Job):
     futures = [executor.submit(crunch, sticker) for sticker in job.stickers]
     for i, future in enumerate(concurrent.futures.as_completed(futures)):
+        future.result()
         asyncio.run_coroutine_threadsafe(
             job.status.update(f'Rescaled {i+1}/{len(futures)}', important=False),
             loop
