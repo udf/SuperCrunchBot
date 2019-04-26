@@ -61,10 +61,19 @@ async def on_message(event):
 
 async def job_runner(mod):
     while 1:
+        job: Job = await mod.queue.get()
         try:
-            await mod.run_job(await mod.queue.get())
+            await mod.run_job(job)
         except Exception as e:
             logger.exception('Exception on job runner for %s', mod.__name__)
+            try:
+                job.event.reply(
+                    'Sorry, an unexpected error occurred.\n'
+                    'Please contact the owner of this bot and give them this '
+                    f'number: {job.uuid}'
+                )
+            except:
+                pass  # everything is ok
 
 
 def load_handler_module(name):
