@@ -67,7 +67,7 @@ async def job_runner(mod):
         except Exception as e:
             logger.exception('Exception on job runner for %s', mod.__name__)
             try:
-                job.event.reply(
+                await job.event.reply(
                     'Sorry, an unexpected error occurred.\n'
                     'Please contact the owner of this bot and give them this '
                     f'number: {job.uuid}'
