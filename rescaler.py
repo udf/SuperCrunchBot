@@ -13,22 +13,31 @@ from proxy import logger, JOB_MODULES
 queue = asyncio.Queue(3)
 
 
-def crunch(sticker: Sticker):
-    sticker.file.seek(0)
-    with Image(file=sticker.file) as i:
+def crunch(index, sticker_data):
+    with Image(blob=sticker_data) as i:
         i.resize(width=i.width * 2, height=i.height * 2, filter='sinc')
         i.liquid_rescale(i.width // 2, i.height // 2, delta_x=1, rigidity=5)
-        sticker.file = BytesIO()
-        i.save(file=sticker.file)
+        sticker = BytesIO()
+        i.save(file=sticker)
+    sticker.seek(0)
+    return index, sticker.read()
 
 
 def do_crunch(loop, job: Job):
     executor = concurrent.futures.ProcessPoolExecutor()
-    futures = [executor.submit(crunch, sticker) for sticker in job.stickers]
-    for i, future in enumerate(concurrent.futures.as_completed(futures)):
-        future.result()
+
+    futures = []
+    for i, sticker in enumerate(job.stickers):
+        sticker.file.seek(0)
+        data = sticker.file.read()
+        sticker.file = None
+        futures.append(executor.submit(crunch, i, data))
+
+    for n_done, future in enumerate(concurrent.futures.as_completed(futures)):
+        i, sticker = future.result()
+        job.stickers[i].file = BytesIO(sticker)
         asyncio.run_coroutine_threadsafe(
-            job.status.update(f'Rescaled {i+1}/{len(futures)}', important=False),
+            job.status.update(f'Rescaled {n_done+1}/{len(futures)}', important=False),
             loop
         ).result()
 
