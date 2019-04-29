@@ -43,7 +43,9 @@ async def run_job(job: Job):
     await asyncio.wait(pending_tasks)
     stickers = [task.result() for task in pending_tasks]
 
-    # Create 
+    # Create sticker pack
+    # We use a unique id at the end of the original name because the
+    # the stickers belong to the user, which means they can be deleted
     id_len = 2
     title = f'Distorted {job.sticker_set.set.title}'[:64]
     original_short_name = re_by_us.sub('', job.sticker_set.set.short_name)
