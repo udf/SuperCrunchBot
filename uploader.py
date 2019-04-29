@@ -10,7 +10,7 @@ from telethon.tl import types
 from telethon.tl.functions.messages import UploadMediaRequest
 from telethon.tl.functions.stickers import CreateStickerSetRequest
 
-from util import Job, get_pack_url, get_rand_letters
+from util import Job, Sticker, get_pack_url, get_rand_letters
 from proxy import client, logger, me
 
 
@@ -19,23 +19,29 @@ re_by_us = re.compile(f'(?i)_[a-z]+_by_{me.username}$')
 re_by_bot = re.compile(r'(?i)_by_\w+bot$')
 
 
+async def upload_sticker(sticker: Sticker):
+    sticker.file.seek(0)
+    file = await client.upload_file(sticker.file, part_size_kb=512)
+    file = types.InputMediaUploadedDocument(file, 'image/png', [])
+    media = await client(UploadMediaRequest('me', file))
+    return types.InputStickerSetItem(
+        document=utils.get_input_document(media),
+        emoji=sticker.emoji
+    )
+
+
 async def run_job(job: Job):
     logger.info(f'[{job.id}] Running upload job')
     await job.status.update('Uploading...')
-    stickers = []
-    for i, sticker in enumerate(job.stickers):
-        sticker.file.seek(0)
-        file = await client.upload_file(sticker.file, part_size_kb=512)
-        file = types.InputMediaUploadedDocument(file, 'image/png', [])
-        media = await client(UploadMediaRequest('me', file))
-        stickers.append(types.InputStickerSetItem(
-            document=utils.get_input_document(media),
-            emoji=sticker.emoji
-        ))
-        await job.status.update(
-            f'Uploaded {i + 1}/{len(job.stickers)}',
-            important=False
+
+    pending_tasks = []
+    for sticker in job.stickers:
+        pending_tasks.append(
+            asyncio.create_task(upload_sticker(sticker))
         )
+
+    await asyncio.wait(pending_tasks)
+    stickers = [task.result() for task in pending_tasks]
 
     # Create 
     id_len = 2
