@@ -12,5 +12,5 @@ let
     ]);
 in pkgs.mkShell {
     name = "super-crunch-bot-shell";
-    buildInputs = [ python-pkgs ];
+    buildInputs = [ python-pkgs pkgs.openssl_1_0_2 ];
 }
