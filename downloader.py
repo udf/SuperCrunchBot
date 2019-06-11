@@ -76,4 +76,5 @@ async def run_sticker_job(job: StickerJob):
 async def run_photo_job(job: PhotoJob):
     file = BytesIO()
     await client.download_media(job.photo, file)
+    job.photo = None
     job.result = file

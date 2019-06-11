@@ -47,9 +47,9 @@ def crunch_photo(loop, job: PhotoJob):
 
     job.result.seek(0)
     data = job.result.read()
-    job.result.file = None
+    job.result = None
     i, photo = executor.submit(crunch, 0, data).result()
-    job.result.file = BytesIO(photo)
+    job.result = BytesIO(photo)
     asyncio.run_coroutine_threadsafe(
         job.status.update('Rescaled 1', important=False),
         loop
