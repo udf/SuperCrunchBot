@@ -36,11 +36,23 @@ class Job:
     event: events.NewMessage
     status: StatusMessage
 
+
+@dataclass
+class StickerJob(Job):
     # Downloader
     sticker_set: types.messages.StickerSet
 
     # Resizer, Uploader
     stickers: List[Sticker] = None 
+
+
+@dataclass
+class PhotoJob(Job):
+    # Downloader
+    photo: types.Photo
+
+    # Resizer? Uploader?
+    result: BytesIO = None
 
 
 def find_instance(items, class_or_tuple):
