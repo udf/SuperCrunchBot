@@ -8,7 +8,7 @@ let
         };
     };
     python-pkgs = python.withPackages (ps: [
-        ps.Wand ps.telethon
+        ps.Wand (ps.callPackage ./telethon.nix { })
     ]);
 in pkgs.mkShell {
     name = "super-crunch-bot-shell";
