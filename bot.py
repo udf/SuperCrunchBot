@@ -31,7 +31,7 @@ async def on_start(event):
 async def on_photo(event):
     status = StatusMessage(await event.reply('Pending'))
     job = PhotoJob(
-        id=uuid.uuid1(),
+        id=str(uuid.uuid1()),
         owner=await event.get_input_sender(),
         event=event,
         status=status,
@@ -61,7 +61,7 @@ async def on_sticker(event):
 
     status = StatusMessage(await event.reply('Pending'))
     job = StickerJob(
-        id=uuid.uuid1(),
+        id=str(uuid.uuid1()),
         owner=await event.get_input_sender(),
         event=event,
         status=status,
@@ -84,13 +84,13 @@ async def job_runner(mod):
         job: Job = await mod.queue.get()
         try:
             await mod.run_job(job)
-        except Exception as e:
+        except Exception:
             logger.exception('Exception on job runner for %s', mod.__name__)
             try:
                 await job.event.reply(
                     'Sorry, an unexpected error occurred.\n'
                     'Please contact the owner of this bot and give them this '
-                    f'number: {job.uuid}'
+                    f'number: {job.id}'
                 )
             except:
                 pass  # everything is ok
