@@ -83,4 +83,4 @@ async def run_sticker_job(job: StickerJob):
 
 async def run_photo_job(job: PhotoJob):
     job.result.seek(0)
-    await job.event.reply('Done!', file=job.result)
+    await job.event.reply('', file=job.result)
