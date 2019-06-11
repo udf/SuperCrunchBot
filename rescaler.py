@@ -7,23 +7,23 @@ from io import BytesIO
 
 from wand.image import Image
 
-from util import Job, Sticker
+from util import Job, StickerJob, PhotoJob, Sticker
 from proxy import logger, JOB_MODULES
 
 queue = asyncio.Queue(3)
 
 
-def crunch(index, sticker_data):
-    with Image(blob=sticker_data) as i:
+def crunch(index, image_data):
+    with Image(blob=image_data) as i:
         i.resize(width=i.width * 2, height=i.height * 2, filter='sinc')
         i.liquid_rescale(i.width // 2, i.height // 2, delta_x=1, rigidity=5)
-        sticker = BytesIO()
-        i.save(file=sticker)
-    sticker.seek(0)
-    return index, sticker.read()
+        image = BytesIO()
+        i.save(file=image)
+    image.seek(0)
+    return index, image.read()
 
 
-def do_crunch(loop, job: Job):
+def crunch_stickers(loop, job: StickerJob):
     executor = concurrent.futures.ProcessPoolExecutor()
 
     futures = []
@@ -42,12 +42,32 @@ def do_crunch(loop, job: Job):
         ).result()
 
 
+def crunch_photo(loop, job: PhotoJob):
+    executor = concurrent.futures.ProcessPoolExecutor()
+
+    job.result.seek(0)
+    data = job.result.read()
+    job.result.file = None
+    i, photo = executor.submit(crunch, 0, data).result()
+    job.result.file = BytesIO(photo)
+    asyncio.run_coroutine_threadsafe(
+        job.status.update('Rescaled 1', important=False),
+        loop
+    ).result()
+
+
 async def run_job(job: Job):
     logger.info(f'[{job.id}] Running rescale job')
     await job.status.update('Crunching...')
 
     loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, lambda: do_crunch(loop, job))
+
+    if isinstance(job, StickerJob):
+        await loop.run_in_executor(None, lambda: crunch_stickers(loop, job))
+    elif isinstance(job, PhotoJob):
+        await loop.run_in_executor(None, lambda: crunch_photo(loop, job))
+    else:
+        raise TypeError('Unknown job type {}'.format(type(job)))
 
     logger.info(f'[{job.id}] Finished running rescale job')
     await job.status.update('Waiting for upload slot...')

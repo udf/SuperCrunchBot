@@ -10,7 +10,7 @@ from telethon.tl import types
 from telethon.tl.functions.messages import UploadMediaRequest
 from telethon.tl.functions.stickers import CreateStickerSetRequest
 
-from util import Job, Sticker, get_pack_url, get_rand_letters
+from util import Job, StickerJob, PhotoJob, Sticker, get_pack_url, get_rand_letters
 from proxy import client, logger, me
 
 
@@ -34,6 +34,18 @@ async def run_job(job: Job):
     logger.info(f'[{job.id}] Running upload job')
     await job.status.update('Uploading...')
 
+    if isinstance(job, StickerJob):
+        await run_sticker_job(job)
+    elif isinstance(job, PhotoJob):
+        await run_photo_job(job)
+    else:
+        raise TypeError('Unknown job type {}'.format(type(job)))
+
+    logger.info(f'[{job.id}] Finished running upload job')
+    await job.status.message.delete()
+
+
+async def run_sticker_job(job: StickerJob):
     pending_tasks = []
     for sticker in job.stickers:
         pending_tasks.append(
@@ -66,6 +78,9 @@ async def run_job(job: Job):
             id_len = min(7, id_len + 1)
             continue
 
-    logger.info(f'[{job.id}] Finished running upload job')
     await job.event.reply('Done! ' + get_pack_url(short_name))
-    await job.status.message.delete()
+
+
+async def run_photo_job(job: PhotoJob):
+    job.result.seek(0)
+    await job.event.reply('Done!', file=job.result)

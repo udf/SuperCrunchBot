@@ -9,7 +9,7 @@ from telethon import events
 from telethon.tl.types import DocumentAttributeSticker
 from telethon.tl.functions.messages import GetStickerSetRequest
 
-from util import StatusMessage, Job, find_instance
+from util import StatusMessage, Job, StickerJob, PhotoJob, find_instance
 import proxy
 
 
@@ -27,10 +27,30 @@ async def on_start(event):
     await event.respond('Send a sticker.')
 
 
-@client.on(events.NewMessage)
-async def on_message(event):
-    if not event.message.sticker:
-        return
+@client.on(events.NewMessage(func=lambda e: e.photo))
+async def on_photo(event):
+    status = StatusMessage(await event.reply('Pending'))
+    job = PhotoJob(
+        id=uuid.uuid1(),
+        owner=await event.get_input_sender(),
+        event=event,
+        status=status,
+        photo=event.photo
+    )
+    logger.info(
+        '[%s] User %s requested photo %s',
+        job.id,
+        event.from_id,
+        event.photo.id
+    )
+
+    await status.update('Waiting for download slot.')
+    await JOB_MODULES['downloader'].queue.put(job)
+    await status.update('Queued for download.')
+
+
+@client.on(events.NewMessage(func=lambda e: e.sticker))
+async def on_sticker(event):
     sticker = event.message.sticker
     sticker_attrib = find_instance(sticker.attributes, DocumentAttributeSticker)
     if not sticker_attrib.stickerset:
@@ -40,7 +60,7 @@ async def on_message(event):
     sticker_set = await client(GetStickerSetRequest(sticker_attrib.stickerset))
 
     status = StatusMessage(await event.reply('Pending'))
-    job = Job(
+    job = StickerJob(
         id=uuid.uuid1(),
         owner=await event.get_input_sender(),
         event=event,

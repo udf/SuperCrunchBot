@@ -6,7 +6,7 @@ import asyncio
 from io import BytesIO
 from collections import defaultdict
 
-from util import Job, Sticker
+from util import Job, StickerJob, PhotoJob, Sticker
 from proxy import client, logger, JOB_MODULES
 
 
@@ -17,6 +17,20 @@ async def run_job(job: Job):
     logger.info(f'[{job.id}] Running download job')
     await job.status.update('Starting download...')
 
+    if isinstance(job, StickerJob):
+        await run_sticker_job(job)
+    elif isinstance(job, PhotoJob):
+        await run_photo_job(job)
+    else:
+        raise TypeError('Unknown job type {}'.format(type(job)))
+
+    logger.info(f'[{job.id}] Finished running download job')
+    await job.status.update('Waiting for rescale slot...')
+    await JOB_MODULES['rescaler'].queue.put(job)
+    await job.status.update('Queued for rescaling.')
+
+
+async def run_sticker_job(job: StickerJob):
     sticker_set = job.sticker_set
 
     # Sticker emojis are retrieved as a mapping of
@@ -57,7 +71,9 @@ async def run_job(job: Job):
         )
 
     job.stickers = stickers
-    logger.info(f'[{job.id}] Finished running download job')
-    await job.status.update('Waiting for rescale slot...')
-    await JOB_MODULES['rescaler'].queue.put(job)
-    await job.status.update('Queued for rescaling.')
+
+
+async def run_photo_job(job: PhotoJob):
+    file = BytesIO()
+    await client.download_media(job.photo, file)
+    job.result = file
